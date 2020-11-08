@@ -1,38 +1,26 @@
 import { useEffect } from 'react';
-import { Card, CardHeader, CardBody, CardFooter, Alert } from 'reactstrap';
+import { Card, CardHeader, CardBody, CardFooter } from 'reactstrap';
+import { ChatMessages } from './ChatMessages';
 import { ChatMessageForm } from './ChatMessageForm';
 import { scrollToBottom } from '../helpers';
 
 export function ChatCard(props) {
-  const {authUser, currentChatUser, messages, onMessageSubmit} = props;
+  const {authUserName, threadUserName, threadMessages, onMessageSubmit} = props;
 
   useEffect(() => {
     scrollToBottom('chat-card-body');
-  }, [messages]);
+  }, [threadMessages]);
 
   return (
     <Card>
-      <CardHeader>{currentChatUser}</CardHeader>
+      <CardHeader>{threadUserName}</CardHeader>
 
       <CardBody className="chat-card-body">
-        {messages.map((message, index) => {
-          const color = message.user === authUser ? 'success' : 'primary';
-          const author = message.user === authUser ? 'You' : message.user;
-          const position = message.user === authUser ? 'right' : 'left';
-
-          return (
-            <div className={`text-${position}`} key={index}>
-              <Alert color={color} className="d-inline-block">
-                <small className="d-block"><b>{author}</b></small>
-                {message.message}
-              </Alert>
-            </div>
-          );
-        })}
+        <ChatMessages authUserName={authUserName} threadMessages={threadMessages} />
       </CardBody>
 
       <CardFooter>
-        <ChatMessageForm disabled={!currentChatUser} onSubmit={onMessageSubmit} />
+        <ChatMessageForm disabled={!threadUserName} onSubmit={onMessageSubmit} />
       </CardFooter>
     </Card>
   );

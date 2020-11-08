@@ -12,7 +12,7 @@ export function ChatCard(props) {
   }, [threadMessages]);
 
   return (
-    <Card>
+    <Card className="h-100">
       <CardHeader>{threadUserName}</CardHeader>
 
       <CardBody className="chat-card-body">

@@ -1,65 +1,77 @@
-import { useState} from 'react';
-import io from 'socket.io-client';
+import { useState } from 'react';
 import { Container, Row, Col, Card, CardBody } from 'reactstrap';
+import { createSocketForUser, getThreadMessages } from './helpers';
 import { AuthUserForm } from './components/AuthUserForm';
 import { ActiveUsersList } from './components/ActiveUsersList';
 import { ChatCard } from './components/ChatCard';
 
-function createSocketForUser(userName) {
-  const socket = io(`http://localhost:8000?userName=${userName}`);
-
-  socket.on('connect', () => console.log('WebSocket connected!'));
-  socket.on('disconnect', () => console.log('WebSocket disconnected!'));
-
-  return socket;
-}
-
 export function App() {
-  const [socket, setSocket] = useState();
-  const [threads, setThreads] = useState({});
+  const [socket, setSocket] = useState(null);
   const [activeUsers, setActiveUsers] = useState([]);
   const [authUserName, setAuthUserName] = useState(null);
-  const [currentThreadUserName, setCurrentThreadUserName] = useState(null);
-
-  function appendMessageToThread(threadUserName, {userName, text}) {
-    setThreads((oldMessages) => {
-      const oldThreadMessages = oldMessages[threadUserName];
-      const newThreadMessages = [...(oldThreadMessages || []), {userName, text}];
-
-      return {
-        ...oldMessages,
-        [threadUserName]: newThreadMessages,
-      };
-    });
-  }
+  const [currentThreadData, setCurrentThreadData] = useState({
+    userName: null,
+    messages: [],
+  });
 
   function handleAuthUserSubmit(inputUserName) {
     const newSocket = createSocketForUser(inputUserName);
 
     newSocket.on('chat/active-users', (data) => {
-      setActiveUsers(() => {
-        const newActiveUsers = data.filter((userName) => userName !== inputUserName);
+      const newActiveUsers = data.filter((userName) => userName !== inputUserName);
 
-        if (!newActiveUsers.length) {
-          setCurrentThreadUserName(null);
-        }
+      if (!newActiveUsers.length) {
+        setCurrentThreadData({
+          userName: null,
+          messages: [],
+        });
+      }
 
-        return newActiveUsers;
-      });
+      setActiveUsers(newActiveUsers);
     });
 
     newSocket.on('chat/received-message', ({userName, text}) => {
-      appendMessageToThread(userName, {userName, text});
+      setCurrentThreadData((oldData) => {
+        if (oldData.userName === userName) {
+          return {
+            userName: oldData.userName,
+            messages: [...oldData.messages, {userName, text}],
+          };
+        }
+
+        return oldData;
+      });
     });
 
     setSocket(newSocket);
     setAuthUserName(inputUserName);
   }
 
-  function handleMessageSubmit(messageText) {
-    appendMessageToThread(currentThreadUserName, {userName: authUserName, text: messageText});
+  async function handleThreadSelection(userName) {
+    const messages = await getThreadMessages(userName, authUserName);
 
-    socket.emit('chat/send-message', {toUser: currentThreadUserName, text: messageText});
+    setCurrentThreadData({
+      userName,
+      messages: messages.map((message) => ({
+        userName: message.fromUser,
+        text: message.text,
+      })),
+    });
+  }
+
+  function handleMessageSubmit(messageText) {
+    setCurrentThreadData((oldData) => ({
+      userName: oldData.userName,
+      messages: [
+        ...oldData.messages,
+        {userName: authUserName, text: messageText},
+      ],
+    }));
+
+    socket.emit('chat/send-message', {
+      toUser: currentThreadData.userName,
+      text: messageText,
+    });
   }
 
   return (
@@ -74,19 +86,19 @@ export function App() {
                 <h5>Welcome {authUserName}, start chatting now! ;)</h5>
                 <Card>
                   <CardBody className="py-0 px-0">
-                    <Row>
-                      <Col md="3" className="pr-0">
+                    <Row className="content-wrapper">
+                      <Col md="3" className="pr-0 h-100">
                         <ActiveUsersList
                           users={activeUsers}
-                          threadUserName={currentThreadUserName}
-                          onItemClick={(userName) => setCurrentThreadUserName(userName)}
+                          threadUserName={currentThreadData.userName}
+                          onItemClick={handleThreadSelection}
                         />
                       </Col>
-                      <Col md="9" className="pl-0">
+                      <Col md="9" className="pl-0 h-100">
                         <ChatCard
                           authUserName={authUserName}
-                          threadUserName={currentThreadUserName}
-                          threadMessages={threads[currentThreadUserName] || []}
+                          threadUserName={currentThreadData.userName}
+                          threadMessages={currentThreadData.messages}
                           onMessageSubmit={handleMessageSubmit}
                         />
                       </Col>

@@ -1,6 +1,14 @@
 
+.content-wrapper {
+  height: 400px;
+}
+
+.active-users-list {
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
 .chat-card-body {
-  max-height: 400px;
   overflow-y: auto;
   scroll-behavior: smooth;
 }

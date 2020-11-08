@@ -15,7 +15,7 @@ export function ActiveUsersList(props) {
   );
 
   return (
-    <ListGroup>
+    <ListGroup className="active-users-list h-100">
       {!listItems.length ? <ListGroupItem>No users connected yet</ListGroupItem> : null}
       {listItems}
     </ListGroup>
